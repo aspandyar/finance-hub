@@ -1,10 +1,11 @@
 // Base API client with shared functionality
+import { getApiUrl, config } from '../config/env';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = getApiUrl();
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
+  return localStorage.getItem(config.auth.tokenKey);
 };
 
 // API request helper
