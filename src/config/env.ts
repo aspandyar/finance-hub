@@ -4,14 +4,14 @@
 export const config = {
   // API Configuration
   api: {
-    // Full API URL (e.g., http://localhost:3001 or https://api.example.com)
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001',
+    // Full API URL (e.g., http://localhost:3000 or https://api.example.com)
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000',
     
     // API host (e.g., localhost or api.example.com)
     host: import.meta.env.VITE_API_HOST || 'localhost',
     
-    // API port
-    port: Number(import.meta.env.VITE_API_PORT) || 3001,
+    // API port (backend default: 3000)
+    port: Number(import.meta.env.VITE_API_PORT) || 3000,
     
     // API protocol (http or https)
     protocol: import.meta.env.VITE_API_PROTOCOL || 'http',
@@ -46,8 +46,8 @@ export const config = {
 export const getApiUrl = (): string => {
   // If VITE_API_BASE_URL is explicitly set, use it (takes priority)
   const envBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envBaseUrl) {
-    return envBaseUrl;
+  if (envBaseUrl && envBaseUrl.trim() !== '') {
+    return envBaseUrl.trim();
   }
   
   // Otherwise, build URL from separate components

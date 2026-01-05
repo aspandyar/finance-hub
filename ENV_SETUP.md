@@ -14,8 +14,8 @@ This document describes all environment variables that can be configured for the
 
 #### Option 1: Full URL (Recommended)
 ```bash
-# Full API Base URL
-VITE_API_BASE_URL=http://localhost:3001
+# Full API Base URL (backend runs on port 3000)
+VITE_API_BASE_URL=http://localhost:3000
 ```
 
 #### Option 2: Separate Components
@@ -23,8 +23,8 @@ VITE_API_BASE_URL=http://localhost:3001
 # API Host (e.g., localhost, api.example.com)
 VITE_API_HOST=localhost
 
-# API Port (default: 3001)
-VITE_API_PORT=3001
+# API Port (default: 3000 - backend port)
+VITE_API_PORT=3000
 
 # API Protocol (http or https)
 VITE_API_PROTOCOL=http
@@ -50,19 +50,19 @@ VITE_AUTH_TOKEN_KEY=authToken
 # Token refresh interval in milliseconds (default: 3600000 = 1 hour)
 VITE_AUTH_REFRESH_INTERVAL=3600000
 
-# Frontend dev server port (default: 3000)
-VITE_DEV_PORT=3000
+# Frontend dev server port (default: 3001)
+VITE_DEV_PORT=3001
 ```
 
 ## Example .env File
 
 ```bash
 # API Configuration
-VITE_API_BASE_URL=http://localhost:3001
+VITE_API_BASE_URL=http://localhost:3000
 
 # Or use separate components:
 # VITE_API_HOST=localhost
-# VITE_API_PORT=3001
+# VITE_API_PORT=3000
 # VITE_API_PROTOCOL=http
 
 # Optional: API Timeout
@@ -76,8 +76,8 @@ VITE_APP_VERSION=1.0.0
 VITE_AUTH_TOKEN_KEY=authToken
 VITE_AUTH_REFRESH_INTERVAL=3600000
 
-# Optional: Dev Server Port
-VITE_DEV_PORT=3000
+# Optional: Dev Server Port (frontend runs on port 3001)
+VITE_DEV_PORT=3001
 ```
 
 ## Environment-Specific Files
@@ -97,16 +97,16 @@ If environment variables are not set, the following defaults are used:
 
 | Variable | Default Value |
 |----------|---------------|
-| `VITE_API_BASE_URL` | `http://localhost:3001` |
+| `VITE_API_BASE_URL` | `http://localhost:3000` |
 | `VITE_API_HOST` | `localhost` |
-| `VITE_API_PORT` | `3001` |
+| `VITE_API_PORT` | `3000` |
 | `VITE_API_PROTOCOL` | `http` |
 | `VITE_API_TIMEOUT` | `30000` (30 seconds) |
 | `VITE_APP_NAME` | `Finance Hub` |
 | `VITE_APP_VERSION` | `1.0.0` |
 | `VITE_AUTH_TOKEN_KEY` | `authToken` |
 | `VITE_AUTH_REFRESH_INTERVAL` | `3600000` (1 hour) |
-| `VITE_DEV_PORT` | `3000` |
+| `VITE_DEV_PORT` | `3001` |
 
 ## Important Notes
 

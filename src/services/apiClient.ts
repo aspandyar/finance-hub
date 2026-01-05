@@ -1,7 +1,21 @@
 // Base API client with shared functionality
 import { getApiUrl, config } from '../config/env';
 
-const API_BASE_URL = getApiUrl();
+// Get API URL - use relative URLs in dev (proxy handles it) or absolute in production
+const getApiBaseUrl = () => {
+  // In development, use relative URLs (Vite proxy will forward to backend)
+  // In production, use absolute URL
+  if (import.meta.env.DEV && import.meta.env.VITE_USE_PROXY !== 'false') {
+    return ''; // Empty string means relative URL
+  }
+  
+  const url = getApiUrl();
+  // Debug log (remove in production)
+  if (import.meta.env.DEV) {
+    console.log('[API Client] Base URL:', url || '(relative - using proxy)');
+  }
+  return url;
+};
 
 // Get auth token from localStorage
 export const getAuthToken = (): string | null => {
@@ -40,7 +54,15 @@ export const apiRequest = async <T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const apiBaseUrl = getApiBaseUrl();
+  const fullUrl = `${apiBaseUrl}${endpoint}`;
+  
+  // Debug log (remove in production)
+  if (import.meta.env.DEV) {
+    console.log('[API Client] Request:', fullUrl);
+  }
+  
+  const response = await fetch(fullUrl, {
     ...options,
     headers,
   });
