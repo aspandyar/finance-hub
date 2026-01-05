@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X, Upload, Calendar, MessageSquare } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, Upload, Calendar, MessageSquare, Loader2 } from 'lucide-react'
 import { 
   Wallet, 
   ShoppingBag, 
@@ -9,38 +9,81 @@ import {
   Heart,
   Briefcase,
   GraduationCap,
-  Gamepad2,
-  Gift
+  Gift,
+  Code,
+  TrendingUp,
+  DollarSign,
+  Zap,
+  MoreHorizontal,
+  Film,
+  type LucideIcon
 } from 'lucide-react'
+import { 
+  TransactionType, 
+  FrequencyType
+} from '../../constants'
+import { categoryApi, type Category } from '../../services/categoryApi'
 
 interface TransactionModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-type TransactionType = 'income' | 'expense'
-
-const categories = [
-  { id: 'food', name: 'Food', icon: UtensilsCrossed, color: 'text-orange-500' },
-  { id: 'transport', name: 'Transport', icon: Car, color: 'text-blue-500' },
-  { id: 'shopping', name: 'Shopping', icon: ShoppingBag, color: 'text-pink-500' },
-  { id: 'home', name: 'Home', icon: Home, color: 'text-green-500' },
-  { id: 'health', name: 'Health', icon: Heart, color: 'text-red-500' },
-  { id: 'work', name: 'Work', icon: Briefcase, color: 'text-purple-500' },
-  { id: 'education', name: 'Education', icon: GraduationCap, color: 'text-indigo-500' },
-  { id: 'entertainment', name: 'Entertainment', icon: Gamepad2, color: 'text-yellow-500' },
-  { id: 'gift', name: 'Gifts', icon: Gift, color: 'text-rose-500' },
-  { id: 'other', name: 'Other', icon: Wallet, color: 'text-gray-500' },
-]
+// Map icon names from backend to Lucide React icons
+const iconMap: Record<string, LucideIcon> = {
+  'briefcase': Briefcase,
+  'code': Code,
+  'trending-up': TrendingUp,
+  'gift': Gift,
+  'dollar-sign': DollarSign,
+  'utensils': UtensilsCrossed,
+  'car': Car,
+  'home': Home,
+  'zap': Zap,
+  'film': Film,
+  'shopping-bag': ShoppingBag,
+  'heart': Heart,
+  'book': GraduationCap,
+  'more-horizontal': MoreHorizontal,
+}
 
 export default function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
-  const [type, setType] = useState<TransactionType>('expense')
+  const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [amount, setAmount] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [comment, setComment] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
-  const [recurringPeriod, setRecurringPeriod] = useState<'week' | 'month'>('month')
+  const [recurringPeriod, setRecurringPeriod] = useState<FrequencyType>(FrequencyType.MONTHLY)
+  
+  // State for categories fetched from API
+  const [categories, setCategories] = useState<Category[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
+
+  // Fetch categories from API when modal opens or type changes
+  useEffect(() => {
+    if (!isOpen) return
+
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true)
+      setCategoriesError(null)
+      try {
+        const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
+        const fetchedCategories = await categoryApi.getAll(categoryType)
+        setCategories(fetchedCategories)
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        setCategoriesError(error instanceof Error ? error.message : 'Failed to load categories')
+        // Fallback to empty array on error
+        setCategories([])
+      } finally {
+        setIsLoadingCategories(false)
+      }
+    }
+
+    fetchCategories()
+  }, [isOpen, type])
 
   if (!isOpen) return null
 
@@ -76,10 +119,13 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
           <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
             <button
               type="button"
-              onClick={() => setType('income')}
+              onClick={() => {
+                setType(TransactionType.INCOME)
+                setSelectedCategory(null) // Reset category when switching type
+              }}
               className={`
                 flex-1 py-2 px-4 rounded-md font-medium transition-all
-                ${type === 'income' 
+                ${type === TransactionType.INCOME
                   ? 'bg-white text-income shadow-sm border-b-2 border-income' 
                   : 'text-gray-600 hover:text-gray-900'
                 }
@@ -89,10 +135,13 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             </button>
             <button
               type="button"
-              onClick={() => setType('expense')}
+              onClick={() => {
+                setType(TransactionType.EXPENSE)
+                setSelectedCategory(null) // Reset category when switching type
+              }}
               className={`
                 flex-1 py-2 px-4 rounded-md font-medium transition-all
-                ${type === 'expense' 
+                ${type === TransactionType.EXPENSE
                   ? 'bg-white text-expense shadow-sm border-b-2 border-expense' 
                   : 'text-gray-600 hover:text-gray-900'
                 }
@@ -121,29 +170,56 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             <label className="block text-sm font-medium text-gray-700">
               Category
             </label>
-            <div className="grid grid-cols-5 gap-2 overflow-hidden">
-              {categories.map((category) => {
-                const Icon = category.icon
-                const isSelected = selectedCategory === category.id
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`
-                      flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 transition-all min-w-0
-                      ${isSelected 
-                        ? 'border-gray-900 bg-gray-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <Icon size={18} className={category.color} />
-                    <span className="text-xs text-gray-600 truncate w-full text-center">{category.name}</span>
-                  </button>
-                )
-              })}
-            </div>
+            {isLoadingCategories ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-gray-400" />
+                <span className="ml-2 text-sm text-gray-500">Loading categories...</span>
+              </div>
+            ) : categoriesError ? (
+              <div className="py-4 text-center">
+                <p className="text-sm text-red-600">{categoriesError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
+                    categoryApi.getAll(categoryType)
+                      .then(setCategories)
+                      .catch(err => setCategoriesError(err.message))
+                  }}
+                  className="mt-2 text-sm text-gray-600 hover:text-gray-900 underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : categories.length === 0 ? (
+              <div className="py-4 text-center text-sm text-gray-500">
+                No categories available
+              </div>
+            ) : (
+              <div className="grid grid-cols-5 gap-2 overflow-hidden">
+                {categories.map((category: Category) => {
+                  const Icon = iconMap[category.icon || ''] || Wallet
+                  const isSelected = selectedCategory === category.id
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setSelectedCategory(category.id)}
+                      className={`
+                        flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 transition-all min-w-0
+                        ${isSelected 
+                          ? 'border-gray-900 bg-gray-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      <Icon size={18} className="flex-shrink-0" style={{ color: category.color }} />
+                      <span className="text-xs text-gray-600 truncate w-full text-center">{category.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Date */}
@@ -194,13 +270,26 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             </label>
             
             {isRecurring && (
-              <div className="ml-8 flex gap-2">
+              <div className="ml-8 flex gap-2 flex-wrap">
                 <button
                   type="button"
-                  onClick={() => setRecurringPeriod('week')}
+                  onClick={() => setRecurringPeriod(FrequencyType.DAILY)}
                   className={`
                     px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === 'week' 
+                    ${recurringPeriod === FrequencyType.DAILY
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }
+                  `}
+                >
+                  Daily
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecurringPeriod(FrequencyType.WEEKLY)}
+                  className={`
+                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                    ${recurringPeriod === FrequencyType.WEEKLY
                       ? 'bg-gray-900 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }
@@ -210,16 +299,29 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
                 </button>
                 <button
                   type="button"
-                  onClick={() => setRecurringPeriod('month')}
+                  onClick={() => setRecurringPeriod(FrequencyType.MONTHLY)}
                   className={`
                     px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === 'month' 
+                    ${recurringPeriod === FrequencyType.MONTHLY
                       ? 'bg-gray-900 text-white' 
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }
                   `}
                 >
                   Month
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRecurringPeriod(FrequencyType.YEARLY)}
+                  className={`
+                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                    ${recurringPeriod === FrequencyType.YEARLY
+                      ? 'bg-gray-900 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }
+                  `}
+                >
+                  Year
                 </button>
               </div>
             )}
