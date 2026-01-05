@@ -1,23 +1,39 @@
 import { TrendingUp, TrendingDown, PiggyBank, BarChart3 } from 'lucide-react'
 import MetricCard from './MetricCard'
 
-// Mock sparkline component (very thin line)
+// Mock sparkline component (very thin line with distinct peaks)
 function Sparkline() {
-  const points = Array.from({ length: 30 }, () => Math.random() * 40 + 30)
-  const max = Math.max(...points)
-  const min = Math.min(...points)
-  const normalized = points.map(p => ((p - min) / (max - min)) * 100)
+  // Pattern: starts upward, dips, rises, dips, ends with slight upward trend
+  // Using more points for smoother angular transitions
+  const dataPoints = [
+    15, 22, 18, 28, 20, 32, 25, 30, 22, 26, 24, 28
+  ]
+  const max = Math.max(...dataPoints)
+  const min = Math.min(...dataPoints)
+  const range = max - min || 1
+  // Scale to use middle 60% of height (20% to 80%) for better visual balance
+  const normalized = dataPoints.map(p => ((p - min) / range) * 20 + 10)
 
   return (
-    <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
-      <polyline
-        points={normalized.map((y, i) => `${(i / (normalized.length - 1)) * 100},${100 - y}`).join(' ')}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="0.5"
-        className="text-gray-400"
-      />
-    </svg>
+    <div className="w-full h-full overflow-hidden">
+      <svg 
+        className="w-full h-full" 
+        viewBox="0 0 100 40" 
+        preserveAspectRatio="none" 
+        style={{ display: 'block' }}
+      >
+        <polyline
+          points={normalized.map((y, i) => {
+            const x = (i / (normalized.length - 1)) * 100
+            return `${x},${40 - y}`
+          }).join(' ')}
+          fill="none"
+          stroke="#d1d5db"
+          strokeWidth="0.5"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </div>
   )
 }
 

@@ -52,8 +52,14 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-modal w-full max-w-md shadow-2xl">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-modal w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">Add Transaction</h2>
@@ -115,7 +121,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             <label className="block text-sm font-medium text-gray-700">
               Category
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-2 overflow-hidden">
               {categories.map((category) => {
                 const Icon = category.icon
                 const isSelected = selectedCategory === category.id
@@ -125,15 +131,15 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
                     type="button"
                     onClick={() => setSelectedCategory(category.id)}
                     className={`
-                      flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all
+                      flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 transition-all min-w-0
                       ${isSelected 
                         ? 'border-gray-900 bg-gray-50' 
                         : 'border-gray-200 hover:border-gray-300'
                       }
                     `}
                   >
-                    <Icon size={20} className={category.color} />
-                    <span className="text-xs text-gray-600">{category.name}</span>
+                    <Icon size={18} className={category.color} />
+                    <span className="text-xs text-gray-600 truncate w-full text-center">{category.name}</span>
                   </button>
                 )
               })}

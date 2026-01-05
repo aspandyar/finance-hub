@@ -52,7 +52,9 @@ export default function MetricCard({
             )}
           </div>
           {sparkline && (
-            <div className="h-12 mt-4">{sparkline}</div>
+            <div className="h-12 mt-4 overflow-hidden relative">
+              {sparkline}
+            </div>
           )}
         </div>
       ) : (
