@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react'
 export default function ChartsSection() {
   const { user } = useAuth()
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([])
+  const [incomeCategories, setIncomeCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [expensesData, setExpensesData] = useState<{ date: string; value: number }[]>([])
   const [incomeData, setIncomeData] = useState<{ date: string; value: number }[]>([])
@@ -65,6 +66,7 @@ export default function ChartsSection() {
         const incomeCats = allCategories.filter(cat => cat.type === 'income')
         
         setExpenseCategories(expenseCats)
+        setIncomeCategories(incomeCats)
         
         // Use first category color for chart colors
         if (expenseCats.length > 0) {
@@ -109,12 +111,30 @@ export default function ChartsSection() {
     fetchTransactions()
   }, [user?.id])
 
-  // Transform categories to chart data format using actual transaction data
-  const categoryData = expenseCategories
+  // Transform expense categories to chart data format using actual transaction data
+  const expenseCategoryData = expenseCategories
     .map(cat => {
       // Calculate total amount for this category from transactions
       const categoryTotal = transactions
         .filter(t => t.type === 'expense' && t.categoryId === cat.id)
+        .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+      
+      return {
+        name: cat.name,
+        value: Math.round(categoryTotal * 100) / 100,
+        color: cat.color,
+      }
+    })
+    .filter(cat => cat.value > 0)
+    .sort((a, b) => b.value - a.value) // Sort by value descending
+    .slice(0, 5)
+
+  // Transform income categories to chart data format using actual transaction data
+  const incomeCategoryData = incomeCategories
+    .map(cat => {
+      // Calculate total amount for this category from transactions
+      const categoryTotal = transactions
+        .filter(t => t.type === 'income' && t.categoryId === cat.id)
         .reduce((sum, t) => sum + parseFloat(t.amount), 0)
       
       return {
@@ -164,19 +184,36 @@ export default function ChartsSection() {
           )}
         </div>
 
-        {/* Category Donut Chart */}
-        <div className="bg-white rounded-card p-6 shadow-card col-span-2">
+        {/* Income by Category Donut Chart */}
+        <div className="bg-white rounded-card p-6 shadow-card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">Income by Category</h3>
+          {isLoadingCategories || isLoadingTransactions ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-gray-400" />
+              <span className="ml-2 text-sm text-gray-500">Loading data...</span>
+            </div>
+          ) : incomeCategoryData.length > 0 ? (
+            <DonutChart data={incomeCategoryData} />
+          ) : (
+            <div className="py-12 text-center text-sm text-gray-500">
+              No income category data available
+            </div>
+          )}
+        </div>
+
+        {/* Expenses by Category Donut Chart */}
+        <div className="bg-white rounded-card p-6 shadow-card">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Expenses by Category</h3>
           {isLoadingCategories || isLoadingTransactions ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={24} className="animate-spin text-gray-400" />
               <span className="ml-2 text-sm text-gray-500">Loading data...</span>
             </div>
-          ) : categoryData.length > 0 ? (
-            <DonutChart data={categoryData} />
+          ) : expenseCategoryData.length > 0 ? (
+            <DonutChart data={expenseCategoryData} />
           ) : (
             <div className="py-12 text-center text-sm text-gray-500">
-              No category data available
+              No expense category data available
             </div>
           )}
         </div>
