@@ -47,6 +47,8 @@ export default function Dashboard() {
     savings,
     avgExpense,
     balanceHistory,
+    lastIncomePayments,
+    lastExpensePayments,
     isLoading,
   } = useDashboardData(user?.id, user?.currency || 'USD')
 
@@ -80,6 +82,28 @@ export default function Dashboard() {
           value={totalIncome}
           icon={<TrendingUp size={20} />}
           color="income"
+          additionalContent={
+            lastIncomePayments.length > 0 ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  3 Last Income
+                </p>
+                {lastIncomePayments.map((payment, index) => (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-700 truncate">
+                        {payment.categoryName}
+                      </p>
+                      <p className="text-gray-500 text-[10px]">{payment.date}</p>
+                    </div>
+                    <p className="text-income font-medium ml-2 flex-shrink-0">
+                      {payment.amount}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : undefined
+          }
         />
 
         {/* Expenses */}
@@ -88,6 +112,28 @@ export default function Dashboard() {
           value={totalExpenses}
           icon={<TrendingDown size={20} />}
           color="expense"
+          additionalContent={
+            lastExpensePayments.length > 0 ? (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+                  3 Last Expense
+                </p>
+                {lastExpensePayments.map((payment, index) => (
+                  <div key={index} className="flex items-center justify-between text-xs">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-700 truncate">
+                        {payment.categoryName}
+                      </p>
+                      <p className="text-gray-500 text-[10px]">{payment.date}</p>
+                    </div>
+                    <p className="text-expense font-medium ml-2 flex-shrink-0">
+                      {payment.amount}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : undefined
+          }
         />
 
         {/* Savings */}

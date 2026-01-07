@@ -8,6 +8,7 @@ interface MetricCardProps {
   color?: 'income' | 'expense' | 'savings' | 'neutral'
   isWide?: boolean
   sparkline?: ReactNode
+  additionalContent?: ReactNode
 }
 
 export default function MetricCard({
@@ -17,7 +18,8 @@ export default function MetricCard({
   icon,
   color = 'neutral',
   isWide = false,
-  sparkline
+  sparkline,
+  additionalContent
 }: MetricCardProps) {
   const colorClasses = {
     income: 'text-income',
@@ -71,6 +73,11 @@ export default function MetricCard({
           </p>
           {subtitle && (
             <p className="text-xs text-gray-500">{subtitle}</p>
+          )}
+          {additionalContent && (
+            <div className="mt-2 pt-2 border-t border-gray-100">
+              {additionalContent}
+            </div>
           )}
         </div>
       )}
