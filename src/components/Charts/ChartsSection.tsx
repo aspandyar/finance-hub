@@ -51,7 +51,7 @@ export default function ChartsSection() {
           setIncomeColor(incomeCats[0]?.color || '#10b981')
         }
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        // Silently handle error
       } finally {
         setIsLoadingCategories(false)
       }

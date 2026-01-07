@@ -23,7 +23,22 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     try {
       await register(email, password, fullName, currency)
     } catch (err: any) {
-      setError(err.message || 'Failed to register. Please try again.')
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to register. Please try again.';
+      
+      if (err.status === 409) {
+        errorMessage = 'This email is already registered. Please login instead.';
+      } else if (err.status === 400) {
+        errorMessage = err.data?.details 
+          ? `Validation error: ${Array.isArray(err.data.details) ? err.data.details.join(', ') : err.data.details}`
+          : err.message || 'Invalid input. Please check your information.';
+      } else if (err.status === 0 || err.message?.includes('Failed to fetch') || err.message?.includes('Network')) {
+        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false)
     }

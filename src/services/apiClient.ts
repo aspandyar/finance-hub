@@ -1,20 +1,9 @@
 // Base API client with shared functionality
 import { getApiUrl, config } from '../config/env';
 
-// Get API URL - use relative URLs in dev (proxy handles it) or absolute in production
+// Get API URL - returns empty string when proxy is enabled (for relative URLs)
 const getApiBaseUrl = () => {
-  // In development, use relative URLs (Vite proxy will forward to backend)
-  // In production, use absolute URL
-  if (import.meta.env.DEV && import.meta.env.VITE_USE_PROXY !== 'false') {
-    return ''; // Empty string means relative URL
-  }
-  
-  const url = getApiUrl();
-  // Debug log (remove in production)
-  if (import.meta.env.DEV) {
-    console.log('[API Client] Base URL:', url || '(relative - using proxy)');
-  }
-  return url;
+  return getApiUrl();
 };
 
 // Get auth token from localStorage
@@ -55,23 +44,59 @@ export const apiRequest = async <T>(
   }
 
   const apiBaseUrl = getApiBaseUrl();
-  const fullUrl = `${apiBaseUrl}${endpoint}`;
   
-  // Debug log (remove in production)
-  if (import.meta.env.DEV) {
-    console.log('[API Client] Request:', fullUrl);
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const fullUrl = `${apiBaseUrl}${normalizedEndpoint}`;
+  
+  // Validate URL format only for absolute URLs
+  if (apiBaseUrl) {
+    try {
+      new URL(fullUrl);
+    } catch (urlError) {
+      throw new Error(`Invalid API URL: ${fullUrl}. Please check your VITE_API_BASE_URL configuration.`);
+    }
   }
   
-  const response = await fetch(fullUrl, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(fullUrl, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      let errorData;
+      const contentType = response.headers.get('content-type');
+      
+      try {
+        if (contentType && contentType.includes('application/json')) {
+          errorData = await response.json();
+        } else {
+          const text = await response.text();
+          errorData = { error: text || `HTTP ${response.status}: ${response.statusText}` };
+        }
+      } catch (parseError) {
+        errorData = { 
+          error: `HTTP ${response.status}: ${response.statusText}`,
+          details: 'Failed to parse error response'
+        };
+      }
+
+      const errorMessage = errorData?.error || errorData?.message || `HTTP error! status: ${response.status}`;
+      
+      const error = new Error(errorMessage);
+      (error as any).status = response.status;
+      (error as any).data = errorData;
+      throw error;
+    }
+
+    return response.json();
+  } catch (error: any) {
+    // Re-throw with more context
+    if (error instanceof Error) {
+      throw error;
+    }
+    
+    throw new Error(error?.message || 'Network error: Failed to connect to server');
   }
-
-  return response.json();
 };
 

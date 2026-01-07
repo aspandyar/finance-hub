@@ -21,7 +21,20 @@ export default function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     try {
       await login(email, password)
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Please check your credentials.')
+      // Provide more detailed error messages
+      let errorMessage = 'Failed to login. Please check your credentials.';
+      
+      if (err.status === 401) {
+        errorMessage = 'Invalid email or password. Please try again.';
+      } else if (err.status === 400) {
+        errorMessage = err.message || 'Invalid request. Please check your input.';
+      } else if (err.status === 0 || err.message?.includes('Failed to fetch') || err.message?.includes('Network')) {
+        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false)
     }

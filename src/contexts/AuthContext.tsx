@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           const currentUser = await authApi.getCurrentUser();
           setUser(currentUser);
-        } catch (error) {
+        } catch (error: any) {
           // Token is invalid or expired
           tokenStorage.remove();
           setUser(null);
@@ -71,7 +71,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await authApi.logout();
     } catch (error) {
       // Even if logout fails on server, clear local state
-      console.error('Logout error:', error);
     } finally {
       tokenStorage.remove();
       setUser(null);

@@ -72,9 +72,8 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
         const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
         const fetchedCategories = await categoryApi.getAll(categoryType)
         setCategories(fetchedCategories)
-      } catch (error) {
-        console.error('Error fetching categories:', error)
-        setCategoriesError(error instanceof Error ? error.message : 'Failed to load categories')
+      } catch (error: any) {
+        setCategoriesError(error.message || 'Failed to load categories')
         // Fallback to empty array on error
         setCategories([])
       } finally {
@@ -90,7 +89,6 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Logic will be added later
-    console.log({ type, amount, selectedCategory, date, comment, isRecurring, recurringPeriod })
     onClose()
   }
 
