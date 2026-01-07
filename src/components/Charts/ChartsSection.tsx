@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import LineChart from './LineChart'
 import DonutChart from './DonutChart'
 import { categoryApi, type Category } from '../../services/categoryApi'
+import { useAuth } from '../../contexts/AuthContext'
 import { Loader2 } from 'lucide-react'
 
 // Mock data for charts (this would come from transactions API in the future)
@@ -26,20 +27,24 @@ const incomeData = [
 ]
 
 export default function ChartsSection() {
+  const { user } = useAuth()
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [expenseColor, setExpenseColor] = useState('#ef4444')
   const [incomeColor, setIncomeColor] = useState('#10b981')
 
-  // Fetch expense categories to get colors
+  // Fetch categories by user ID to get colors
   useEffect(() => {
     const fetchCategories = async () => {
+      if (!user?.id) return
+      
       setIsLoadingCategories(true)
       try {
-        const [expenseCats, incomeCats] = await Promise.all([
-          categoryApi.getAll('expense'),
-          categoryApi.getAll('income'),
-        ])
+        const allCategories = await categoryApi.getByUserId(user.id)
+        
+        // Filter by type
+        const expenseCats = allCategories.filter(cat => cat.type === 'expense')
+        const incomeCats = allCategories.filter(cat => cat.type === 'income')
         
         setExpenseCategories(expenseCats)
         
@@ -58,7 +63,7 @@ export default function ChartsSection() {
     }
 
     fetchCategories()
-  }, [])
+  }, [user?.id])
 
   // Transform categories to chart data format (mock values - would come from transactions API)
   const categoryData = expenseCategories.slice(0, 5).map((cat, index) => ({
