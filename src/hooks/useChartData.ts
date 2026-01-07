@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { transactionApi, type Transaction } from '../services/transactionApi'
 import { categoryApi, type Category } from '../services/categoryApi'
 import {
   transformTransactionsToChartData,
   transformTransactionsToCategoryData,
 } from '../utils/transactionHelpers'
+import { useDateFilter } from '../contexts/DateFilterContext'
 
 interface ChartData {
   expensesData: { date: string; value: number }[]
@@ -24,6 +25,7 @@ interface ChartData {
  * Custom hook for fetching and transforming chart data
  */
 export const useChartData = (userId: string | undefined): ChartData => {
+  const { dateRange } = useDateFilter()
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([])
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -89,9 +91,32 @@ export const useChartData = (userId: string | undefined): ChartData => {
     fetchTransactions()
   }, [userId])
 
+  // Filter transactions by date range
+  const filteredTransactions = useMemo(() => {
+    if (!dateRange.from && !dateRange.to) {
+      return transactions
+    }
+
+    return transactions.filter(transaction => {
+      const transactionDate = new Date(transaction.date)
+      const fromDate = dateRange.from ? new Date(dateRange.from) : null
+      const toDate = dateRange.to ? new Date(dateRange.to) : null
+
+      // Set time to start of day for accurate comparison
+      transactionDate.setHours(0, 0, 0, 0)
+      if (fromDate) fromDate.setHours(0, 0, 0, 0)
+      if (toDate) toDate.setHours(23, 59, 59, 999)
+
+      if (fromDate && transactionDate < fromDate) return false
+      if (toDate && transactionDate > toDate) return false
+
+      return true
+    })
+  }, [transactions, dateRange])
+
   // Transform data for charts
-  const expenseTransactions = transactions.filter(t => t.type === 'expense')
-  const incomeTransactions = transactions.filter(t => t.type === 'income')
+  const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense')
+  const incomeTransactions = filteredTransactions.filter(t => t.type === 'income')
 
   const expensesData = transformTransactionsToChartData(expenseTransactions)
   const incomeData = transformTransactionsToChartData(incomeTransactions)

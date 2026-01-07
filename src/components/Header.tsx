@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Plus, Bell, User, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import DateRangeFilter from './DateRangeFilter/DateRangeFilter'
 
 interface HeaderProps {
   onAddTransaction: () => void
@@ -35,6 +36,9 @@ export default function Header({ onAddTransaction }: HeaderProps) {
 
           {/* Right side actions */}
           <div className="flex items-center gap-4">
+            {/* Date Range Filter */}
+            <DateRangeFilter />
+
             {/* Add Transaction Button */}
             <button
               onClick={onAddTransaction}

@@ -2,6 +2,7 @@ import { TrendingUp, TrendingDown, PiggyBank, BarChart3, Loader2 } from 'lucide-
 import MetricCard from './MetricCard'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDashboardData } from '../../hooks/useDashboardData'
+import { formatCurrency } from '../../utils/formatters'
 
 // Sparkline component that takes data points
 function Sparkline({ dataPoints }: { dataPoints: number[] }) {
@@ -49,6 +50,7 @@ export default function Dashboard() {
     balanceHistory,
     lastIncomePayments,
     lastExpensePayments,
+    budgetComparison,
     isLoading,
   } = useDashboardData(user?.id, user?.currency || 'USD')
 
@@ -71,9 +73,108 @@ export default function Dashboard() {
         <MetricCard
           title="Balance"
           value={balance}
-          subtitle="As of today"
+          subtitle={
+            budgetComparison
+              ? `Predicted: ${formatCurrency(budgetComparison.predictedBalance, user?.currency || 'USD')} | Actual: ${formatCurrency(budgetComparison.actualBalance, user?.currency || 'USD')}`
+              : "As of today"
+          }
           isWide={true}
           sparkline={<Sparkline dataPoints={balanceHistory} />}
+          additionalContent={
+            budgetComparison ? (
+              <div className="mt-4 space-y-3 pt-4 border-t border-gray-100">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    Budget vs Actual (This Month)
+                  </p>
+                  
+                  {/* Income Comparison */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Income:</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500">
+                          Predicted: <span className="font-medium text-gray-700">{formatCurrency(budgetComparison.predictedIncome, user?.currency || 'USD')}</span>
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span className="text-gray-500">
+                          Actual: <span className={`font-medium ${budgetComparison.actualIncome >= budgetComparison.predictedIncome ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(budgetComparison.actualIncome, user?.currency || 'USD')}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    {budgetComparison.predictedIncome > 0 && (
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            budgetComparison.actualIncome >= budgetComparison.predictedIncome
+                              ? 'bg-green-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (budgetComparison.actualIncome / budgetComparison.predictedIncome) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Expense Comparison */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600">Expenses:</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500">
+                          Predicted: <span className="font-medium text-gray-700">{formatCurrency(budgetComparison.predictedExpenses, user?.currency || 'USD')}</span>
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span className="text-gray-500">
+                          Actual: <span className={`font-medium ${budgetComparison.actualExpenses <= budgetComparison.predictedExpenses ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(budgetComparison.actualExpenses, user?.currency || 'USD')}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                    {budgetComparison.predictedExpenses > 0 && (
+                      <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${
+                            budgetComparison.actualExpenses <= budgetComparison.predictedExpenses
+                              ? 'bg-green-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{
+                            width: `${Math.min(100, (budgetComparison.actualExpenses / budgetComparison.predictedExpenses) * 100)}%`
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Balance Comparison */}
+                  <div className="space-y-1 pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-gray-600 font-medium">Balance:</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500">
+                          Predicted: <span className={`font-medium ${budgetComparison.predictedBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(budgetComparison.predictedBalance, user?.currency || 'USD')}
+                          </span>
+                        </span>
+                        <span className="text-gray-400">|</span>
+                        <span className="text-gray-500">
+                          Actual: <span className={`font-medium ${budgetComparison.actualBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatCurrency(budgetComparison.actualBalance, user?.currency || 'USD')}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : undefined
+          }
         />
 
         {/* Income */}
@@ -86,7 +187,7 @@ export default function Dashboard() {
             lastIncomePayments.length > 0 ? (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  3 Last Income
+                  5 Last Income
                 </p>
                 {lastIncomePayments.map((payment, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">
@@ -116,7 +217,7 @@ export default function Dashboard() {
             lastExpensePayments.length > 0 ? (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-                  3 Last Expense
+                  5 Last Expense
                 </p>
                 {lastExpensePayments.map((payment, index) => (
                   <div key={index} className="flex items-center justify-between text-xs">

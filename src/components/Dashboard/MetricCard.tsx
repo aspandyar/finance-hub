@@ -58,6 +58,11 @@ export default function MetricCard({
               {sparkline}
             </div>
           )}
+          {additionalContent && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              {additionalContent}
+            </div>
+          )}
         </div>
       ) : (
         // Regular card layout
