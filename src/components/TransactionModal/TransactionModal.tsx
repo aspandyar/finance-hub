@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, Upload, Calendar, MessageSquare, Loader2 } from 'lucide-react'
 import { 
   Wallet, 
@@ -22,7 +22,9 @@ import {
   TransactionType, 
   FrequencyType
 } from '../../constants'
-import { categoryApi, type Category } from '../../services/categoryApi'
+import { useAuth } from '../../contexts/AuthContext'
+import { useCategories } from '../../hooks/useCategories'
+import type { Category } from '../../services/categoryApi'
 
 interface TransactionModalProps {
   isOpen: boolean
@@ -48,6 +50,7 @@ const iconMap: Record<string, LucideIcon> = {
 }
 
 export default function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
+  const { user } = useAuth()
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [amount, setAmount] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -56,33 +59,14 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringPeriod, setRecurringPeriod] = useState<FrequencyType>(FrequencyType.MONTHLY)
   
-  // State for categories fetched from API
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
-  const [categoriesError, setCategoriesError] = useState<string | null>(null)
-
-  // Fetch categories from API when modal opens or type changes
-  useEffect(() => {
-    if (!isOpen) return
-
-    const fetchCategories = async () => {
-      setIsLoadingCategories(true)
-      setCategoriesError(null)
-      try {
-        const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
-        const fetchedCategories = await categoryApi.getAll(categoryType)
-        setCategories(fetchedCategories)
-      } catch (error: any) {
-        setCategoriesError(error.message || 'Failed to load categories')
-        // Fallback to empty array on error
-        setCategories([])
-      } finally {
-        setIsLoadingCategories(false)
-      }
-    }
-
-    fetchCategories()
-  }, [isOpen, type])
+  // Fetch categories using hook
+  const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
+  const { 
+    categories, 
+    isLoading: isLoadingCategories, 
+    error: categoriesError,
+    refetch: refetchCategories 
+  } = useCategories(user?.id, categoryType, isOpen)
 
   if (!isOpen) return null
 
@@ -178,12 +162,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
                 <p className="text-sm text-red-600">{categoriesError}</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
-                    categoryApi.getAll(categoryType)
-                      .then(setCategories)
-                      .catch(err => setCategoriesError(err.message))
-                  }}
+                  onClick={refetchCategories}
                   className="mt-2 text-sm text-gray-600 hover:text-gray-900 underline"
                 >
                   Retry
