@@ -3,7 +3,7 @@ import { Calendar, X } from 'lucide-react'
 import { useDateFilter } from '../../contexts/DateFilterContext'
 
 export default function DateRangeFilter() {
-  const { dateRange, setDateRange, clearDateRange } = useDateFilter()
+  const { dateRange, setDateRange } = useDateFilter()
   const [isOpen, setIsOpen] = useState(false)
 
   const handleFromDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,42 +20,20 @@ export default function DateRangeFilter() {
     })
   }
 
-  const hasActiveFilter = dateRange.from || dateRange.to
-
   // Get today's date in YYYY-MM-DD format for max date
   const today = new Date().toISOString().split('T')[0]
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium ${
-            hasActiveFilter
-              ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
-        >
-          <Calendar size={18} />
-          <span className="text-sm">
-            {hasActiveFilter
-              ? `${dateRange.from || 'Start'} - ${dateRange.to || 'End'}`
-              : 'Filter by Date'}
-          </span>
-        </button>
-        {hasActiveFilter && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              clearDateRange()
-            }}
-            className="p-0.5 rounded hover:bg-blue-200 text-blue-700"
-            aria-label="Clear date filter"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+      >
+        <Calendar size={18} />
+        <span className="text-sm">
+          {`${dateRange.from || 'Start'} - ${dateRange.to || 'End'}`}
+        </span>
+      </button>
 
       {isOpen && (
         <>
@@ -104,17 +82,6 @@ export default function DateRangeFilter() {
                 </div>
               </div>
 
-              {hasActiveFilter && (
-                <button
-                  onClick={() => {
-                    clearDateRange()
-                    setIsOpen(false)
-                  }}
-                  className="w-full mt-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                >
-                  Clear Filter
-                </button>
-              )}
             </div>
           </div>
         </>
