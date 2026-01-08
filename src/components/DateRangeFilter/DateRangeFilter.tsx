@@ -27,32 +27,35 @@ export default function DateRangeFilter() {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium ${
-          hasActiveFilter
-            ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
-            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-        }`}
-      >
-        <Calendar size={18} />
-        <span className="text-sm">
-          {hasActiveFilter
-            ? `${dateRange.from || 'Start'} - ${dateRange.to || 'End'}`
-            : 'Filter by Date'}
-        </span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors font-medium ${
+            hasActiveFilter
+              ? 'bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100'
+              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          <Calendar size={18} />
+          <span className="text-sm">
+            {hasActiveFilter
+              ? `${dateRange.from || 'Start'} - ${dateRange.to || 'End'}`
+              : 'Filter by Date'}
+          </span>
+        </button>
         {hasActiveFilter && (
           <button
             onClick={(e) => {
               e.stopPropagation()
               clearDateRange()
             }}
-            className="ml-1 p-0.5 rounded hover:bg-blue-200"
+            className="p-0.5 rounded hover:bg-blue-200 text-blue-700"
+            aria-label="Clear date filter"
           >
             <X size={14} />
           </button>
         )}
-      </button>
+      </div>
 
       {isOpen && (
         <>
