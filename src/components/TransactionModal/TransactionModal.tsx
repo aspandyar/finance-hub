@@ -200,7 +200,17 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             <input
               type="text"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                // Only allow numbers and a single decimal point
+                const numericValue = value.replace(/[^0-9.]/g, '')
+                // Ensure only one decimal point
+                const parts = numericValue.split('.')
+                const filteredValue = parts.length > 2 
+                  ? parts[0] + '.' + parts.slice(1).join('')
+                  : numericValue
+                setAmount(filteredValue)
+              }}
               placeholder="0"
               className="w-full text-4xl font-semibold text-center border-0 border-b-2 border-gray-300 focus:border-gray-900 focus:ring-0 pb-2 outline-none transition-colors"
             />
