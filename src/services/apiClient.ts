@@ -1,6 +1,5 @@
 // Base API client with shared functionality
 import { getApiUrl, config } from '../config/env';
-import { convertKeysToSnakeCase, convertKeysToCamelCase } from '../utils/caseConverter';
 
 // Get API URL - returns empty string when proxy is enabled (for relative URLs)
 const getApiBaseUrl = () => {
@@ -44,19 +43,6 @@ export const apiRequest = async <T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  // Convert request body from camelCase to snake_case if it exists
-  let body = options.body;
-  if (body && typeof body === 'string') {
-    try {
-      const parsedBody = JSON.parse(body);
-      const convertedBody = convertKeysToSnakeCase(parsedBody);
-      body = JSON.stringify(convertedBody);
-    } catch (e) {
-      // If body is not valid JSON, leave it as is
-      // This handles cases where body might be FormData or other non-JSON data
-    }
-  }
-
   const apiBaseUrl = getApiBaseUrl();
   
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
@@ -75,7 +61,6 @@ export const apiRequest = async <T>(
     const response = await fetch(fullUrl, {
       ...options,
       headers,
-      body,
     });
 
     if (!response.ok) {
@@ -85,8 +70,6 @@ export const apiRequest = async <T>(
       try {
         if (contentType && contentType.includes('application/json')) {
           errorData = await response.json();
-          // Convert error response from snake_case to camelCase
-          errorData = convertKeysToCamelCase(errorData);
         } else {
           const text = await response.text();
           errorData = { error: text || `HTTP ${response.status}: ${response.statusText}` };
@@ -107,8 +90,7 @@ export const apiRequest = async <T>(
     }
 
     const responseData = await response.json();
-    // Convert response from snake_case to camelCase
-    return convertKeysToCamelCase(responseData) as T;
+    return responseData as T;
   } catch (error: any) {
     // Re-throw with more context
     if (error instanceof Error) {

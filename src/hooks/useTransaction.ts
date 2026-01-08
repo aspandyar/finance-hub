@@ -17,8 +17,8 @@ export interface CreateRecurringTransactionParams {
   type: TransactionType
   description: string | null
   frequency: FrequencyType
-  startDate: string
-  endDate: string | null
+  startDate: string | Date
+  endDate: string | Date | null
 }
 
 interface UseTransactionResult {
@@ -27,6 +27,30 @@ interface UseTransactionResult {
   createTransaction: (params: CreateTransactionParams) => Promise<void>
   createRecurringTransaction: (params: CreateRecurringTransactionParams) => Promise<void>
   clearError: () => void
+}
+
+/**
+ * Calculate the next occurrence date based on frequency
+ */
+function calculateNextOccurrence(startDate: Date, frequency: FrequencyType): Date {
+  const date = new Date(startDate)
+
+  switch (frequency) {
+    case FrequencyType.DAILY:
+      date.setDate(date.getDate() + 1)
+      break
+    case FrequencyType.WEEKLY:
+      date.setDate(date.getDate() + 7)
+      break
+    case FrequencyType.MONTHLY:
+      date.setMonth(date.getMonth() + 1)
+      break
+    case FrequencyType.YEARLY:
+      date.setFullYear(date.getFullYear() + 1)
+      break
+  }
+
+  return date
 }
 
 /**
@@ -42,14 +66,6 @@ export const useTransaction = (): UseTransactionResult => {
 
     try {
       const transactionType = params.type === TransactionType.INCOME ? 'income' : 'expense'
-
-      console.log('Creating transaction:', {
-        categoryId: params.categoryId,
-        amount: params.amount,
-        type: transactionType,
-        description: params.description,
-        date: params.date,
-      })
       
       await transactionApi.create({
         categoryId: params.categoryId,
@@ -73,14 +89,28 @@ export const useTransaction = (): UseTransactionResult => {
     try {
       const transactionType = params.type === TransactionType.INCOME ? 'income' : 'expense'
       
+      // Convert startDate to Date object if it's a string
+      const startDate = params.startDate instanceof Date 
+        ? params.startDate 
+        : new Date(params.startDate)
+      
+      // Convert endDate to Date object if it's a string and not null
+      const endDate = params.endDate 
+        ? (params.endDate instanceof Date ? params.endDate : new Date(params.endDate))
+        : null
+      
+      // Calculate next occurrence
+      const nextOccurrence = calculateNextOccurrence(startDate, params.frequency)
+      
       await recurringTransactionApi.create({
         categoryId: params.categoryId,
         amount: params.amount,
         type: transactionType,
         description: params.description,
         frequency: params.frequency,
-        startDate: params.startDate,
-        endDate: params.endDate,
+        startDate: startDate,
+        endDate: endDate,
+        nextOccurrence: nextOccurrence,
       })
     } catch (err: any) {
       setError(err.message || 'Failed to create recurring transaction')
