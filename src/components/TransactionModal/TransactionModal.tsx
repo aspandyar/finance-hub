@@ -24,6 +24,8 @@ import {
 } from '../../constants'
 import { useAuth } from '../../contexts/AuthContext'
 import { useCategories } from '../../hooks/useCategories'
+import { useTransaction } from '../../hooks/useTransaction'
+import { validateTransactionForm } from '../../utils/transactionValidations'
 import type { Category } from '../../services/categoryApi'
 
 interface TransactionModalProps {
@@ -58,6 +60,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
   const [comment, setComment] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringPeriod, setRecurringPeriod] = useState<FrequencyType>(FrequencyType.MONTHLY)
+  const [validationError, setValidationError] = useState<string | null>(null)
   
   // Fetch categories using hook
   const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
@@ -68,12 +71,68 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
     refetch: refetchCategories 
   } = useCategories(user?.id, categoryType, isOpen)
 
+  // Transaction creation hook
+  const {
+    isSubmitting,
+    error: submitError,
+    createTransaction,
+    createRecurringTransaction,
+    clearError,
+  } = useTransaction()
+
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Logic will be added later
-    onClose()
+    clearError()
+    setValidationError(null)
+
+    // Validation
+    const validation = validateTransactionForm({
+      amount,
+      selectedCategory,
+      userId: user?.id,
+    })
+
+    if (!validation.isValid) {
+      setValidationError(validation.error)
+      return
+    }
+
+    try {
+      const amountValue = parseFloat(amount)
+      const transactionType = type
+      const description = comment.trim() || null
+
+      console.log('Category ID:', selectedCategory)
+
+      if (isRecurring) {
+        // Create recurring transaction
+        await createRecurringTransaction({
+          categoryId: selectedCategory!,
+          amount: amountValue,
+          type: transactionType,
+          description,
+          frequency: recurringPeriod,
+          startDate: date,
+          endDate: null,
+        })
+      } else {
+        // Create regular transaction
+        await createTransaction({
+          categoryId: selectedCategory!,
+          amount: amountValue,
+          type: transactionType,
+          description,
+          date,
+        })
+      }
+
+      // Reload page to apply changes
+      window.location.reload()
+    } catch (error) {
+      // Error is already handled by the hook
+    }
   }
 
   return (
@@ -317,20 +376,36 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             </div>
           </div>
 
+          {/* Submit Error */}
+          {(submitError || validationError) && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{submitError || validationError}</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-3 px-4 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+              disabled={isSubmitting || isLoadingCategories}
+              className="flex-1 py-3 px-4 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Add
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                'Add'
+              )}
             </button>
           </div>
         </form>
