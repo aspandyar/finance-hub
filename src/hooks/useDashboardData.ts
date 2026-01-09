@@ -33,6 +33,8 @@ interface DashboardMetrics {
   lastIncomePayments: LastPayment[]
   lastExpensePayments: LastPayment[]
   budgetComparison: BudgetComparison | null
+  recurringTransactions: RecurringTransaction[]
+  categoryMap: Map<string, string>
   isLoading: boolean
   error: Error | null
 }
@@ -316,6 +318,8 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
     lastIncomePayments,
     lastExpensePayments,
     budgetComparison,
+    recurringTransactions: recurringTransactions.filter(rt => rt.isActive),
+    categoryMap,
     isLoading,
     error,
   }

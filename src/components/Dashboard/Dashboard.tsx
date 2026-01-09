@@ -1,8 +1,12 @@
-import { TrendingUp, TrendingDown, PiggyBank, BarChart3, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { TrendingUp, TrendingDown, PiggyBank, BarChart3, Loader2, TrendingUp as PredictionIcon } from 'lucide-react'
 import MetricCard from './MetricCard'
 import { useAuth } from '../../contexts/AuthContext'
 import { useDashboardData } from '../../hooks/useDashboardData'
+import { usePrediction } from '../../hooks/usePrediction'
 import { formatCurrency } from '../../utils/formatters'
+import ConfirmationDialog from '../ConfirmationDialog/ConfirmationDialog'
+import PredictionModal from '../PredictionModal/PredictionModal'
 
 // Sparkline component that takes data points
 function Sparkline({ dataPoints }: { dataPoints: number[] }) {
@@ -53,6 +57,85 @@ export default function Dashboard() {
     budgetComparison,
     isLoading,
   } = useDashboardData(user?.id, user?.currency || 'USD')
+  
+  const { isCreating, error: predictionError, createPrediction, overwriteBudget, clearError } = usePrediction()
+  const [predictionModal, setPredictionModal] = useState<{
+    isOpen: boolean
+  }>({
+    isOpen: false,
+  })
+  const [confirmationDialog, setConfirmationDialog] = useState<{
+    isOpen: boolean
+    categoryId: string
+    amount: number
+    targetMonth: string
+    existingBudgetId?: string
+  }>({
+    isOpen: false,
+    categoryId: '',
+    amount: 0,
+    targetMonth: '',
+  })
+
+  const handleOpenPredictionModal = () => {
+    setPredictionModal({ isOpen: true })
+    clearError()
+  }
+
+  const handleClosePredictionModal = () => {
+    setPredictionModal({ isOpen: false })
+    clearError()
+  }
+
+  const handleConfirmPrediction = async (categoryId: string, amount: number, month: string) => {
+    if (!user?.id) return
+
+    try {
+      clearError()
+      const result = await createPrediction(user.id, categoryId, amount, month)
+      
+      if (result?.needsConfirmation) {
+        setConfirmationDialog({
+          isOpen: true,
+          categoryId,
+          amount,
+          targetMonth: month,
+          existingBudgetId: result.existingBudgetId,
+        })
+        setPredictionModal({ isOpen: false })
+      } else {
+        // Success - reload page to show updated data
+        setPredictionModal({ isOpen: false })
+        window.location.reload()
+      }
+    } catch (error) {
+      // Error is handled by the hook
+      console.error('Failed to create prediction:', error)
+    }
+  }
+
+  const handleConfirmOverwrite = async () => {
+    if (!confirmationDialog.existingBudgetId) return
+
+    try {
+      await overwriteBudget(
+        confirmationDialog.existingBudgetId,
+        confirmationDialog.categoryId,
+        confirmationDialog.amount,
+        confirmationDialog.targetMonth
+      )
+      setConfirmationDialog({ isOpen: false, categoryId: '', amount: 0, targetMonth: '' })
+      // Reload page to show updated data
+      window.location.reload()
+    } catch (error) {
+      console.error('Failed to overwrite budget:', error)
+    }
+  }
+
+  const handleCancelOverwrite = () => {
+    setConfirmationDialog({ isOpen: false, categoryId: '', amount: 0, targetMonth: '' })
+    clearError()
+  }
 
   // Show loading state
   if (isLoading) {
@@ -253,6 +336,43 @@ export default function Dashboard() {
           color="neutral"
         />
       </div>
+
+      {/* Budget Predictions Section */}
+      <div className="mt-8 bg-white rounded-card p-6 shadow-card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Budget Predictions</h2>
+            <p className="text-sm text-gray-500 mt-1">Create budget predictions by selecting a category and month</p>
+          </div>
+          <button
+            onClick={handleOpenPredictionModal}
+            className="px-4 py-2 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
+          >
+            <PredictionIcon size={16} />
+            Create Prediction
+          </button>
+        </div>
+      </div>
+
+      {/* Prediction Modal */}
+      <PredictionModal
+        isOpen={predictionModal.isOpen}
+        onClose={handleClosePredictionModal}
+        onConfirm={handleConfirmPrediction}
+        isLoading={isCreating}
+        error={predictionError}
+      />
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={confirmationDialog.isOpen}
+        title="Budget Already Exists"
+        message={`A budget for this category and month already exists. Do you want to overwrite it with the new prediction?`}
+        confirmText="Yes, Overwrite"
+        cancelText="Cancel"
+        onConfirm={handleConfirmOverwrite}
+        onCancel={handleCancelOverwrite}
+      />
     </div>
   )
 }

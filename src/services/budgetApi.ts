@@ -64,5 +64,10 @@ export const budgetApi = {
       method: 'DELETE',
     });
   },
+
+  // Get budgets by user ID and month
+  getByUserIdAndMonth: async (userId: string, month: string): Promise<Budget[]> => {
+    return apiRequest<Budget[]>(`/api/budgets/user/${userId}/month/${month}`);
+  },
 };
 
