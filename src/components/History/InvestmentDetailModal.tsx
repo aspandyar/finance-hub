@@ -134,13 +134,17 @@ export default function InvestmentDetailModal({
     try {
       await transactionApi.delete(transaction.id)
       setShowDeleteConfirm(false)
+      
+      // Close modal first
+      onClose()
+      
+      // Refresh data from server
       if (onUpdate) {
-        onUpdate()
+        await onUpdate()
       } else {
         // Fallback: reload page
         window.location.reload()
       }
-      onClose()
     } catch (err: any) {
       setError(err.message || 'Failed to delete transaction')
       setIsDeleting(false)
