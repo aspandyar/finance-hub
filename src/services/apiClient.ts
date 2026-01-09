@@ -89,7 +89,8 @@ export const apiRequest = async <T>(
       throw error;
     }
 
-    return response.json();
+    const responseData = await response.json();
+    return responseData as T;
   } catch (error: any) {
     // Re-throw with more context
     if (error instanceof Error) {

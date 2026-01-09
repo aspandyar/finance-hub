@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { X, Upload, Calendar, MessageSquare, Loader2 } from 'lucide-react'
 import { 
   Wallet, 
@@ -22,7 +22,11 @@ import {
   TransactionType, 
   FrequencyType
 } from '../../constants'
-import { categoryApi, type Category } from '../../services/categoryApi'
+import { useAuth } from '../../contexts/AuthContext'
+import { useCategories } from '../../hooks/useCategories'
+import { useTransaction } from '../../hooks/useTransaction'
+import { validateTransactionForm } from '../../utils/transactionValidations'
+import type { Category } from '../../services/categoryApi'
 
 interface TransactionModalProps {
   isOpen: boolean
@@ -48,6 +52,7 @@ const iconMap: Record<string, LucideIcon> = {
 }
 
 export default function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
+  const { user } = useAuth()
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [amount, setAmount] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -55,41 +60,79 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
   const [comment, setComment] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [recurringPeriod, setRecurringPeriod] = useState<FrequencyType>(FrequencyType.MONTHLY)
+  const [hasEndDate, setHasEndDate] = useState(false)
+  const [endDate, setEndDate] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
   
-  // State for categories fetched from API
-  const [categories, setCategories] = useState<Category[]>([])
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false)
-  const [categoriesError, setCategoriesError] = useState<string | null>(null)
+  // Fetch categories using hook
+  const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
+  const { 
+    categories, 
+    isLoading: isLoadingCategories, 
+    error: categoriesError,
+    refetch: refetchCategories 
+  } = useCategories(user?.id, categoryType, isOpen)
 
-  // Fetch categories from API when modal opens or type changes
-  useEffect(() => {
-    if (!isOpen) return
-
-    const fetchCategories = async () => {
-      setIsLoadingCategories(true)
-      setCategoriesError(null)
-      try {
-        const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
-        const fetchedCategories = await categoryApi.getAll(categoryType)
-        setCategories(fetchedCategories)
-      } catch (error: any) {
-        setCategoriesError(error.message || 'Failed to load categories')
-        // Fallback to empty array on error
-        setCategories([])
-      } finally {
-        setIsLoadingCategories(false)
-      }
-    }
-
-    fetchCategories()
-  }, [isOpen, type])
+  // Transaction creation hook
+  const {
+    isSubmitting,
+    error: submitError,
+    createTransaction,
+    createRecurringTransaction,
+    clearError,
+  } = useTransaction()
 
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Logic will be added later
-    onClose()
+    clearError()
+    setValidationError(null)
+
+    // Validation
+    const validation = validateTransactionForm({
+      amount,
+      selectedCategory,
+      userId: user?.id,
+    })
+
+    if (!validation.isValid) {
+      setValidationError(validation.error)
+      return
+    }
+
+    try {
+      const amountValue = parseFloat(amount)
+      const transactionType = type
+      const description = comment.trim() || null
+
+      if (isRecurring) {
+        // Create recurring transaction
+        await createRecurringTransaction({
+          categoryId: selectedCategory!,
+          amount: amountValue,
+          type: transactionType,
+          description,
+          frequency: recurringPeriod,
+          startDate: new Date(date),
+          endDate: hasEndDate && endDate ? new Date(endDate) : null,
+        })
+      } else {
+        // Create regular transaction
+        await createTransaction({
+          categoryId: selectedCategory!,
+          amount: amountValue,
+          type: transactionType,
+          description,
+          date: date,
+        })
+      }
+
+      // Reload page to apply changes
+      window.location.reload()
+    } catch (error) {
+      // Error is already handled by the hook
+    }
   }
 
   return (
@@ -157,7 +200,17 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             <input
               type="text"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value
+                // Only allow numbers and a single decimal point
+                const numericValue = value.replace(/[^0-9.]/g, '')
+                // Ensure only one decimal point
+                const parts = numericValue.split('.')
+                const filteredValue = parts.length > 2 
+                  ? parts[0] + '.' + parts.slice(1).join('')
+                  : numericValue
+                setAmount(filteredValue)
+              }}
               placeholder="0"
               className="w-full text-4xl font-semibold text-center border-0 border-b-2 border-gray-300 focus:border-gray-900 focus:ring-0 pb-2 outline-none transition-colors"
             />
@@ -178,12 +231,7 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
                 <p className="text-sm text-red-600">{categoriesError}</p>
                 <button
                   type="button"
-                  onClick={() => {
-                    const categoryType = type === TransactionType.INCOME ? 'income' : 'expense'
-                    categoryApi.getAll(categoryType)
-                      .then(setCategories)
-                      .catch(err => setCategoriesError(err.message))
-                  }}
+                  onClick={refetchCategories}
                   className="mt-2 text-sm text-gray-600 hover:text-gray-900 underline"
                 >
                   Retry
@@ -259,7 +307,13 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
               <input
                 type="checkbox"
                 checked={isRecurring}
-                onChange={(e) => setIsRecurring(e.target.checked)}
+                onChange={(e) => {
+                  setIsRecurring(e.target.checked)
+                  if (!e.target.checked) {
+                    setHasEndDate(false)
+                    setEndDate('')
+                  }
+                }}
                 className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
               />
               <span className="text-sm font-medium text-gray-700">
@@ -268,60 +322,95 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             </label>
             
             {isRecurring && (
-              <div className="ml-8 flex gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => setRecurringPeriod(FrequencyType.DAILY)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === FrequencyType.DAILY
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                  `}
-                >
-                  Daily
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurringPeriod(FrequencyType.WEEKLY)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === FrequencyType.WEEKLY
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                  `}
-                >
-                  Week
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurringPeriod(FrequencyType.MONTHLY)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === FrequencyType.MONTHLY
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                  `}
-                >
-                  Month
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRecurringPeriod(FrequencyType.YEARLY)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-medium transition-colors
-                    ${recurringPeriod === FrequencyType.YEARLY
-                      ? 'bg-gray-900 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }
-                  `}
-                >
-                  Year
-                </button>
-              </div>
+              <>
+                <div className="ml-8 flex gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setRecurringPeriod(FrequencyType.DAILY)}
+                    className={`
+                      px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      ${recurringPeriod === FrequencyType.DAILY
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }
+                    `}
+                  >
+                    Daily
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringPeriod(FrequencyType.WEEKLY)}
+                    className={`
+                      px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      ${recurringPeriod === FrequencyType.WEEKLY
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }
+                    `}
+                  >
+                    Week
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringPeriod(FrequencyType.MONTHLY)}
+                    className={`
+                      px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      ${recurringPeriod === FrequencyType.MONTHLY
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }
+                    `}
+                  >
+                    Month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurringPeriod(FrequencyType.YEARLY)}
+                    className={`
+                      px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                      ${recurringPeriod === FrequencyType.YEARLY
+                        ? 'bg-gray-900 text-white' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }
+                    `}
+                  >
+                    Year
+                  </button>
+                </div>
+                
+                {/* End Date Toggle */}
+                <div className="ml-8 space-y-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasEndDate}
+                      onChange={(e) => {
+                        setHasEndDate(e.target.checked)
+                        if (!e.target.checked) {
+                          setEndDate('')
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      Set End Date (Optional)
+                    </span>
+                  </label>
+                  
+                  {hasEndDate && (
+                    <div className="relative">
+                      <Calendar size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        min={date}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-900 focus:border-transparent outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
 
@@ -338,20 +427,36 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
             </div>
           </div>
 
+          {/* Submit Error */}
+          {(submitError || validationError) && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{submitError || validationError}</p>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-4 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors"
+              disabled={isSubmitting}
+              className="flex-1 py-3 px-4 text-gray-700 font-medium rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 px-4 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors"
+              disabled={isSubmitting || isLoadingCategories}
+              className="flex-1 py-3 px-4 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Add
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                'Add'
+              )}
             </button>
           </div>
         </form>

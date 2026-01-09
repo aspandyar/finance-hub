@@ -21,15 +21,34 @@ export const useDateFilter = () => {
   return context
 }
 
+// Helper function to get current month date range
+const getCurrentMonthRange = (): DateRange => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth()
+  
+  // First day of current month
+  const fromDate = new Date(year, month, 1)
+  const from = fromDate.toISOString().split('T')[0]
+  
+  // Last day of current month
+  const toDate = new Date(year, month + 1, 0)
+  const to = toDate.toISOString().split('T')[0]
+  
+  return { from, to }
+}
+
 interface DateFilterProviderProps {
   children: ReactNode
 }
 
 export const DateFilterProvider = ({ children }: DateFilterProviderProps) => {
-  const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null })
+  // Initialize with current month as default
+  const [dateRange, setDateRange] = useState<DateRange>(getCurrentMonthRange())
 
   const clearDateRange = () => {
-    setDateRange({ from: null, to: null })
+    // When clearing, reset to current month (not null)
+    setDateRange(getCurrentMonthRange())
   }
 
   return (

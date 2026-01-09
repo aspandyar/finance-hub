@@ -1,5 +1,6 @@
 // Recurring Transaction API service
 import { apiRequest } from './apiClient';
+import { convertDatesToYYYYMMDD } from '../utils/dateHelpers';
 
 export interface RecurringTransaction {
   id: string;
@@ -22,8 +23,9 @@ export interface CreateRecurringTransactionInput {
   type: 'income' | 'expense';
   description?: string | null;
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  startDate: string;
-  endDate?: string | null;
+  startDate: string | Date;
+  endDate?: string | Date | null;
+  nextOccurrence?: string | Date;
 }
 
 export interface UpdateRecurringTransactionInput {
@@ -55,9 +57,12 @@ export const recurringTransactionApi = {
 
   // Create recurring transaction
   create: async (data: CreateRecurringTransactionInput): Promise<RecurringTransaction> => {
+    // Convert Date objects to YYYY-MM-DD format for API
+    const apiData = convertDatesToYYYYMMDD(data, ['startDate', 'endDate', 'nextOccurrence']);
+
     return apiRequest<RecurringTransaction>('/api/recurring-transactions', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(apiData),
     });
   },
 

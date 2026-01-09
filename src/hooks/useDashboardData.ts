@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { transactionApi, type Transaction } from '../services/transactionApi'
+import { recurringTransactionApi, type RecurringTransaction } from '../services/recurringTransactionApi'
 import { categoryApi, type Category } from '../services/categoryApi'
 import { budgetApi, type Budget } from '../services/budgetApi'
 import { calculateDashboardMetrics, calculateBalanceHistory } from '../utils/transactionHelpers'
@@ -32,6 +33,8 @@ interface DashboardMetrics {
   lastIncomePayments: LastPayment[]
   lastExpensePayments: LastPayment[]
   budgetComparison: BudgetComparison | null
+  recurringTransactions: RecurringTransaction[]
+  categoryMap: Map<string, string>
   isLoading: boolean
   error: Error | null
 }
@@ -42,6 +45,7 @@ interface DashboardMetrics {
 export const useDashboardData = (userId: string | undefined, currency: string = 'USD'): DashboardMetrics => {
   const { dateRange } = useDateFilter()
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -86,8 +90,12 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
       setIsLoading(true)
       setError(null)
       try {
-        const fetchedTransactions = await transactionApi.getByUserId(userId)
+        const [fetchedTransactions, fetchedRecurringTransactions] = await Promise.all([
+          transactionApi.getByUserId(userId),
+          recurringTransactionApi.getByUserId(userId)
+        ])
         setTransactions(fetchedTransactions)
+        setRecurringTransactions(fetchedRecurringTransactions)
       } catch (err) {
         console.error('Failed to fetch transactions:', err)
         setError(err instanceof Error ? err : new Error('Failed to fetch transactions'))
@@ -247,10 +255,39 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
 
   const budgetComparison = calculateBudgetComparison()
 
-  // Get last 5 income payments
-  const lastIncomePayments = filteredTransactions
+  // Combine regular transactions and recurring transactions for "last 5" display
+  // Convert recurring transactions to transaction-like format using createdAt
+  const allTransactionsForDisplay = useMemo(() => {
+    const regularTxns = filteredTransactions.map(t => ({
+      id: t.id,
+      type: t.type,
+      amount: t.amount,
+      categoryId: t.categoryId,
+      description: t.description,
+      createdAt: t.createdAt,
+      date: t.date, // Keep date for display
+    }))
+
+    // Convert recurring transactions to transaction-like format
+    const recurringTxns = recurringTransactions
+      .filter(rt => rt.isActive) // Only include active recurring transactions
+      .map(rt => ({
+        id: rt.id,
+        type: rt.type,
+        amount: rt.amount,
+        categoryId: rt.categoryId,
+        description: rt.description,
+        createdAt: rt.createdAt, // Use createdAt for sorting
+        date: rt.startDate, // Use startDate for display
+      }))
+
+    return [...regularTxns, ...recurringTxns]
+  }, [filteredTransactions, recurringTransactions])
+
+  // Get last 5 income payments (sorted by createdAt)
+  const lastIncomePayments = allTransactionsForDisplay 
     .filter(t => t.type === 'income')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
     .map(t => ({
       amount: formatCurrency(parseFloat(t.amount), currency),
@@ -259,10 +296,10 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
       categoryName: categoryMap.get(t.categoryId) || 'Income',
     }))
 
-  // Get last 5 expense payments
-  const lastExpensePayments = filteredTransactions
+  // Get last 5 expense payments (sorted by createdAt)
+  const lastExpensePayments = allTransactionsForDisplay
     .filter(t => t.type === 'expense')
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
     .map(t => ({
       amount: formatCurrency(parseFloat(t.amount), currency),
@@ -281,6 +318,8 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
     lastIncomePayments,
     lastExpensePayments,
     budgetComparison,
+    recurringTransactions: recurringTransactions.filter(rt => rt.isActive),
+    categoryMap,
     isLoading,
     error,
   }
