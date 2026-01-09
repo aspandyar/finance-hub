@@ -4,6 +4,7 @@ import { recurringTransactionApi, type RecurringTransaction } from '../services/
 import { categoryApi, type Category } from '../services/categoryApi'
 import { budgetApi, type Budget } from '../services/budgetApi'
 import { calculateDashboardMetrics, calculateBalanceHistory } from '../utils/transactionHelpers'
+import { convertRecurringToTransactions } from '../utils/recurringTransactionHelpers'
 import { formatCurrency, formatShortDate } from '../utils/formatters'
 import { useDateFilter } from '../contexts/DateFilterContext'
 
@@ -107,30 +108,40 @@ export const useDashboardData = (userId: string | undefined, currency: string = 
     fetchTransactions()
   }, [userId])
 
-  // Filter transactions by date range
+  // Filter transactions by date range and convert recurring transactions
   const filteredTransactions = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) {
-      return transactions
+    // Filter regular transactions by date range
+    let filtered = transactions
+    if (dateRange.from || dateRange.to) {
+      filtered = transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date)
+        const fromDate = dateRange.from ? new Date(dateRange.from) : null
+        const toDate = dateRange.to ? new Date(dateRange.to) : null
+
+        // Set time to start of day for accurate comparison
+        transactionDate.setHours(0, 0, 0, 0)
+        if (fromDate) fromDate.setHours(0, 0, 0, 0)
+        if (toDate) toDate.setHours(23, 59, 59, 999)
+
+        if (fromDate && transactionDate < fromDate) return false
+        if (toDate && transactionDate > toDate) return false
+
+        return true
+      })
     }
 
-    return transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date)
-      const fromDate = dateRange.from ? new Date(dateRange.from) : null
-      const toDate = dateRange.to ? new Date(dateRange.to) : null
+    // Convert recurring transactions to transaction instances for the date range
+    const recurringInstances = convertRecurringToTransactions(
+      recurringTransactions,
+      dateRange.from,
+      dateRange.to
+    )
 
-      // Set time to start of day for accurate comparison
-      transactionDate.setHours(0, 0, 0, 0)
-      if (fromDate) fromDate.setHours(0, 0, 0, 0)
-      if (toDate) toDate.setHours(23, 59, 59, 999)
+    // Combine regular transactions and recurring instances
+    return [...filtered, ...recurringInstances]
+  }, [transactions, recurringTransactions, dateRange])
 
-      if (fromDate && transactionDate < fromDate) return false
-      if (toDate && transactionDate > toDate) return false
-
-      return true
-    })
-  }, [transactions, dateRange])
-
-  // Calculate metrics
+  // Calculate metrics (now includes recurring transactions)
   const metrics = calculateDashboardMetrics(filteredTransactions)
   const balanceHistory = calculateBalanceHistory(filteredTransactions, 12)
 

@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useRegister } from '../../hooks/useRegister'
 import { Mail, Lock, User, Loader2 } from 'lucide-react'
 
 interface RegisterFormProps {
@@ -11,36 +11,16 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [currency, setCurrency] = useState('USD')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const { register } = useAuth()
+  const { isLoading, error, register, clearError } = useRegister()
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setIsLoading(true)
+    clearError()
 
     try {
       await register(email, password, fullName, currency)
-    } catch (err: any) {
-      // Provide more detailed error messages
-      let errorMessage = 'Failed to register. Please try again.';
-      
-      if (err.status === 409) {
-        errorMessage = 'This email is already registered. Please login instead.';
-      } else if (err.status === 400) {
-        errorMessage = err.data?.details 
-          ? `Validation error: ${Array.isArray(err.data.details) ? err.data.details.join(', ') : err.data.details}`
-          : err.message || 'Invalid input. Please check your information.';
-      } else if (err.status === 0 || err.message?.includes('Failed to fetch') || err.message?.includes('Network')) {
-        errorMessage = 'Cannot connect to server. Please check if the backend is running.';
-      } else if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false)
+    } catch (err) {
+      // Error is handled by the hook
     }
   }
 
