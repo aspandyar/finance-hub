@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { transactionApi, type Transaction } from '../services/transactionApi'
+import { recurringTransactionApi, type RecurringTransaction } from '../services/recurringTransactionApi'
 import { categoryApi, type Category } from '../services/categoryApi'
 import {
   transformTransactionsToChartData,
   transformTransactionsToCategoryData,
 } from '../utils/transactionHelpers'
+import { convertRecurringToTransactions } from '../utils/recurringTransactionHelpers'
 import { useDateFilter } from '../contexts/DateFilterContext'
 
 interface ChartData {
@@ -29,6 +31,7 @@ export const useChartData = (userId: string | undefined): ChartData => {
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([])
   const [incomeCategories, setIncomeCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [recurringTransactions, setRecurringTransactions] = useState<RecurringTransaction[]>([])
   const [isLoadingCategories, setIsLoadingCategories] = useState(false)
   const [isLoadingTransactions, setIsLoadingTransactions] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -70,7 +73,7 @@ export const useChartData = (userId: string | undefined): ChartData => {
     fetchCategories()
   }, [userId])
 
-  // Fetch transactions
+  // Fetch transactions and recurring transactions
   useEffect(() => {
     const fetchTransactions = async () => {
       if (!userId) return
@@ -78,8 +81,12 @@ export const useChartData = (userId: string | undefined): ChartData => {
       setIsLoadingTransactions(true)
       setError(null)
       try {
-        const fetchedTransactions = await transactionApi.getByUserId(userId)
+        const [fetchedTransactions, fetchedRecurringTransactions] = await Promise.all([
+          transactionApi.getByUserId(userId),
+          recurringTransactionApi.getByUserId(userId)
+        ])
         setTransactions(fetchedTransactions)
+        setRecurringTransactions(fetchedRecurringTransactions)
       } catch (err) {
         console.error('Failed to fetch transactions:', err)
         setError(err instanceof Error ? err : new Error('Failed to fetch transactions'))
@@ -91,28 +98,38 @@ export const useChartData = (userId: string | undefined): ChartData => {
     fetchTransactions()
   }, [userId])
 
-  // Filter transactions by date range
+  // Filter transactions by date range and convert recurring transactions
   const filteredTransactions = useMemo(() => {
-    if (!dateRange.from && !dateRange.to) {
-      return transactions
+    // Filter regular transactions by date range
+    let filtered = transactions
+    if (dateRange.from || dateRange.to) {
+      filtered = transactions.filter(transaction => {
+        const transactionDate = new Date(transaction.date)
+        const fromDate = dateRange.from ? new Date(dateRange.from) : null
+        const toDate = dateRange.to ? new Date(dateRange.to) : null
+
+        // Set time to start of day for accurate comparison
+        transactionDate.setHours(0, 0, 0, 0)
+        if (fromDate) fromDate.setHours(0, 0, 0, 0)
+        if (toDate) toDate.setHours(23, 59, 59, 999)
+
+        if (fromDate && transactionDate < fromDate) return false
+        if (toDate && transactionDate > toDate) return false
+
+        return true
+      })
     }
 
-    return transactions.filter(transaction => {
-      const transactionDate = new Date(transaction.date)
-      const fromDate = dateRange.from ? new Date(dateRange.from) : null
-      const toDate = dateRange.to ? new Date(dateRange.to) : null
+    // Convert recurring transactions to transaction instances for the date range
+    const recurringInstances = convertRecurringToTransactions(
+      recurringTransactions,
+      dateRange.from,
+      dateRange.to
+    )
 
-      // Set time to start of day for accurate comparison
-      transactionDate.setHours(0, 0, 0, 0)
-      if (fromDate) fromDate.setHours(0, 0, 0, 0)
-      if (toDate) toDate.setHours(23, 59, 59, 999)
-
-      if (fromDate && transactionDate < fromDate) return false
-      if (toDate && transactionDate > toDate) return false
-
-      return true
-    })
-  }, [transactions, dateRange])
+    // Combine regular transactions and recurring instances
+    return [...filtered, ...recurringInstances]
+  }, [transactions, recurringTransactions, dateRange])
 
   // Transform data for charts
   const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense')

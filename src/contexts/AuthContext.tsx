@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await authApi.register({
       email,
       password,
-      full_name: fullName,
+      fullName,
       currency,
     });
     tokenStorage.set(response.token);

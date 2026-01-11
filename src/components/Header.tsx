@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Plus, Bell, User, LogOut } from 'lucide-react'
+import { Plus, Bell, User, LogOut, Home, History } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
+import { Link, useLocation } from 'react-router-dom'
 import DateRangeFilter from './DateRangeFilter/DateRangeFilter'
 
 interface HeaderProps {
@@ -10,6 +11,7 @@ interface HeaderProps {
 export default function Header({ onAddTransaction }: HeaderProps) {
   const { user, logout } = useAuth()
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const location = useLocation()
 
   const handleLogout = async () => {
     await logout()
@@ -25,13 +27,52 @@ export default function Header({ onAddTransaction }: HeaderProps) {
       .slice(0, 2)
   }
 
+  const isActive = (path: string) => {
+    return location.pathname === path
+  }
+
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center">
-            <h1 className="text-2xl font-semibold text-gray-900">Finance Hub</h1>
+          {/* Logo and Navigation */}
+          <div className="flex items-center gap-8">
+            {/* Finance Hub Logo/Home Button */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">FH</span>
+              </div>
+              <h1 className="text-2xl font-semibold text-gray-900">Finance Hub</h1>
+            </Link>
+
+            {/* Navigation Links */}
+            <nav className="flex items-center gap-1">
+              <Link
+                to="/"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive('/')
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Home size={18} />
+                <span>Dashboard</span>
+              </Link>
+              <Link
+                to="/history"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive('/history')
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <History size={18} />
+                <span>History</span>
+              </Link>
+            </nav>
           </div>
 
           {/* Right side actions */}
