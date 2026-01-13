@@ -5,6 +5,7 @@ import Header from './components/Header'
 import Dashboard from './components/Dashboard/Dashboard'
 import ChartsSection from './components/Charts/ChartsSection'
 import History from './components/History/History'
+import RecurringTransactions from './components/RecurringTransactions/RecurringTransactions'
 import TransactionModal from './components/TransactionModal/TransactionModal'
 import { DateFilterProvider } from './contexts/DateFilterContext'
 
@@ -29,6 +30,7 @@ function App() {
                   }
                 />
                 <Route path="/history" element={<History />} />
+                <Route path="/recurring" element={<RecurringTransactions />} />
               </Routes>
             </main>
             <TransactionModal 

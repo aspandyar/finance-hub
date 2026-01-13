@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Bell, User, LogOut, Home, History } from 'lucide-react'
+import { Plus, Bell, User, LogOut, Home, History, Repeat } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { Link, useLocation } from 'react-router-dom'
 import DateRangeFilter from './DateRangeFilter/DateRangeFilter'
@@ -71,6 +71,17 @@ export default function Header({ onAddTransaction }: HeaderProps) {
               >
                 <History size={18} />
                 <span>History</span>
+              </Link>
+              <Link
+                to="/recurring"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive('/recurring')
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Repeat size={18} />
+                <span>Recurring</span>
               </Link>
             </nav>
           </div>

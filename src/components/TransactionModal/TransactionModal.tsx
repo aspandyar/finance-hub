@@ -31,6 +31,7 @@ import type { Category } from '../../services/categoryApi'
 interface TransactionModalProps {
   isOpen: boolean
   onClose: () => void
+  onSuccess?: () => void
 }
 
 // Map icon names from backend to Lucide React icons
@@ -51,7 +52,7 @@ const iconMap: Record<string, LucideIcon> = {
   'more-horizontal': MoreHorizontal,
 }
 
-export default function TransactionModal({ isOpen, onClose }: TransactionModalProps) {
+export default function TransactionModal({ isOpen, onClose, onSuccess }: TransactionModalProps) {
   const { user } = useAuth()
   const [type, setType] = useState<TransactionType>(TransactionType.EXPENSE)
   const [amount, setAmount] = useState('')
@@ -128,8 +129,14 @@ export default function TransactionModal({ isOpen, onClose }: TransactionModalPr
         })
       }
 
-      // Reload page to apply changes
-      window.location.reload()
+      // Call onSuccess callback if provided, otherwise reload page
+      if (onSuccess) {
+        onSuccess()
+        onClose()
+      } else {
+        // Reload page to apply changes
+        window.location.reload()
+      }
     } catch (error) {
       // Error is already handled by the hook
     }
