@@ -5,7 +5,11 @@ export * from './categoryApi';
 export * from './transactionApi';
 export * from './budgetApi';
 export * from './recurringTransactionApi';
-export * from './userApi';
+// Export User type from authApi (userApi also exports User, but we use authApi's version)
+export type { User } from './authApi';
+// Export everything from userApi except User to avoid duplicate export
+export type { UpdateUserInput } from './userApi';
+export { userApi } from './userApi';
 
 // Re-export for convenience
 import { authApi } from './authApi';

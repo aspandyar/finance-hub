@@ -90,7 +90,6 @@ export const apiRequest = async <T>(
     }
 
     // Handle empty responses (e.g., DELETE operations with 204 No Content)
-    const contentType = response.headers.get('content-type');
     const contentLength = response.headers.get('content-length');
     
     // If content-length is 0 or response is 204 No Content, return empty result

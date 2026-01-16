@@ -4,7 +4,6 @@ import { formatCurrency, formatFullDate } from '../../utils/formatters'
 import { transactionApi, type UpdateTransactionInput } from '../../services/transactionApi'
 import { recurringTransactionApi, type RecurringTransaction } from '../../services/recurringTransactionApi'
 import { useAuth } from '../../contexts/AuthContext'
-import ConfirmationDialog from '../ConfirmationDialog/ConfirmationDialog'
 import RecurringTransactionModal from '../RecurringTransactionModal/RecurringTransactionModal'
 import type { Transaction } from '../../services/transactionApi'
 
@@ -61,7 +60,7 @@ export default function InvestmentDetailModal({
         
         // First, try recurringTransactionId (from actual transactions)
         if ('recurringTransactionId' in transaction && transaction.recurringTransactionId) {
-          recurringId = transaction.recurringTransactionId
+          recurringId = String(transaction.recurringTransactionId)
         }
         // Then try recurringId (from generated instances)
         else if (transaction.recurringId) {

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { X, AlertCircle } from 'lucide-react';
 import { recurringTransactionApi, type RecurringTransaction, type EditScope, type DeleteScope } from '../../services/recurringTransactionApi';
 import { categoryApi, type Category } from '../../services/categoryApi';
-import { formatCurrency } from '../../utils/formatters';
 
 interface RecurringTransactionModalProps {
   isOpen: boolean;
