@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react'
 import { X, TrendingUp, Calendar, DollarSign, Tag, Edit2, Trash2, Save, XCircle } from 'lucide-react'
 import { formatCurrency, formatFullDate } from '../../utils/formatters'
 import { transactionApi, type UpdateTransactionInput } from '../../services/transactionApi'
+import { recurringTransactionApi, type RecurringTransaction } from '../../services/recurringTransactionApi'
 import { useAuth } from '../../contexts/AuthContext'
 import ConfirmationDialog from '../ConfirmationDialog/ConfirmationDialog'
+import RecurringTransactionModal from '../RecurringTransactionModal/RecurringTransactionModal'
 import type { Transaction } from '../../services/transactionApi'
 
 interface TransactionWithCategory extends Transaction {
@@ -31,6 +33,9 @@ export default function InvestmentDetailModal({
   const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recurringTransaction, setRecurringTransaction] = useState<RecurringTransaction | null>(null)
+  const [showRecurringModal, setShowRecurringModal] = useState(false)
+  const [recurringModalMode, setRecurringModalMode] = useState<'edit' | 'delete' | null>(null)
 
   // Edit form state
   const [editAmount, setEditAmount] = useState(transaction.amount)
@@ -44,8 +49,57 @@ export default function InvestmentDetailModal({
     setEditDate(transaction.date)
   }, [transaction])
 
-  // Check if this is a recurring transaction instance (can't edit/delete)
+  // Check if this is a recurring transaction instance
   const isRecurringInstance = transaction.id.startsWith('recurring-') || transaction.isRecurring
+
+  // Fetch recurring transaction data if this is a recurring instance
+  useEffect(() => {
+    const fetchRecurringTransaction = async () => {
+      if (isRecurringInstance) {
+        // Try to get recurring ID from different possible sources
+        let recurringId: string | undefined = undefined
+        
+        // First, try recurringTransactionId (from actual transactions)
+        if ('recurringTransactionId' in transaction && transaction.recurringTransactionId) {
+          recurringId = transaction.recurringTransactionId
+        }
+        // Then try recurringId (from generated instances)
+        else if (transaction.recurringId) {
+          recurringId = transaction.recurringId
+        }
+        // Finally, try to extract from transaction ID format: recurring-{id}-{index}
+        else if (transaction.id.startsWith('recurring-')) {
+          // Format is: recurring-{uuid}-{index}
+          // We need to extract the UUID part
+          const match = transaction.id.match(/^recurring-(.+?)-(\d+)$/)
+          if (match && match[1]) {
+            recurringId = match[1]
+          } else {
+            // Fallback: try splitting by '-' and taking everything except first and last
+            const parts = transaction.id.split('-')
+            if (parts.length >= 3) {
+              // Skip 'recurring' (index 0) and the last part (index), get the UUID
+              recurringId = parts.slice(1, -1).join('-')
+            }
+          }
+        }
+
+        if (recurringId) {
+          try {
+            const recurring = await recurringTransactionApi.getById(recurringId)
+            setRecurringTransaction(recurring)
+          } catch (error) {
+            console.error('Failed to fetch recurring transaction:', error)
+            setError('Unable to load recurring transaction details. Please try again.')
+          }
+        } else {
+          setError('Unable to identify recurring transaction. Please try from the Recurring Transactions page.')
+        }
+      }
+    }
+
+    fetchRecurringTransaction()
+  }, [isRecurringInstance, transaction])
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Don't close if editing or showing delete confirmation
@@ -58,8 +112,18 @@ export default function InvestmentDetailModal({
   }
 
   const handleEdit = () => {
-    setIsEditing(true)
-    setError(null)
+    if (isRecurringInstance) {
+      // Open recurring transaction modal for editing
+      if (recurringTransaction) {
+        setRecurringModalMode('edit')
+        setShowRecurringModal(true)
+      } else {
+        setError('Unable to load recurring transaction details. Please try again.')
+      }
+    } else {
+      setIsEditing(true)
+      setError(null)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -121,10 +185,32 @@ export default function InvestmentDetailModal({
 
   const handleDeleteClick = () => {
     if (isRecurringInstance) {
-      setError('Cannot delete recurring transaction instances')
-      return
+      // Open recurring transaction modal for deletion
+      if (recurringTransaction) {
+        setRecurringModalMode('delete')
+        setShowRecurringModal(true)
+      } else {
+        setError('Unable to load recurring transaction details. Please try again.')
+      }
+    } else {
+      setShowDeleteConfirm(true)
     }
-    setShowDeleteConfirm(true)
+  }
+
+  const handleRecurringModalSuccess = () => {
+    setShowRecurringModal(false)
+    setRecurringModalMode(null)
+    // Refresh data
+    if (onUpdate) {
+      onUpdate()
+    } else {
+      window.location.reload()
+    }
+  }
+
+  const handleRecurringModalClose = () => {
+    setShowRecurringModal(false)
+    setRecurringModalMode(null)
   }
 
   const handleConfirmDelete = async () => {
@@ -134,13 +220,17 @@ export default function InvestmentDetailModal({
     try {
       await transactionApi.delete(transaction.id)
       setShowDeleteConfirm(false)
+      
+      // Close modal first
+      onClose()
+      
+      // Refresh data from server
       if (onUpdate) {
-        onUpdate()
+        await onUpdate()
       } else {
         // Fallback: reload page
         window.location.reload()
       }
-      onClose()
     } catch (err: any) {
       setError(err.message || 'Failed to delete transaction')
       setIsDeleting(false)
@@ -169,27 +259,27 @@ export default function InvestmentDetailModal({
                 <>
                   <button
                     onClick={handleEdit}
-                    disabled={isRecurringInstance}
+                    disabled={isRecurringInstance && !recurringTransaction}
                     className={`p-2 rounded-lg transition-colors ${
-                      isRecurringInstance
+                      isRecurringInstance && !recurringTransaction
                         ? 'opacity-50 cursor-not-allowed bg-gray-100'
                         : 'hover:bg-gray-100'
                     }`}
-                    title={isRecurringInstance ? 'Cannot edit recurring transactions' : 'Edit transaction'}
+                    title={isRecurringInstance ? 'Edit recurring transaction' : 'Edit transaction'}
                   >
                     <Edit2 size={18} className="text-gray-600" />
                   </button>
                   <button
                     onClick={handleDeleteClick}
-                    disabled={isRecurringInstance}
+                    disabled={isRecurringInstance && !recurringTransaction}
                     className={`p-2 rounded-lg transition-colors ${
-                      isRecurringInstance
+                      isRecurringInstance && !recurringTransaction
                         ? 'opacity-50 cursor-not-allowed bg-gray-100'
                         : 'hover:bg-red-50'
                     }`}
-                    title={isRecurringInstance ? 'Cannot delete recurring transactions' : 'Delete transaction'}
+                    title={isRecurringInstance ? 'Delete recurring transaction' : 'Delete transaction'}
                   >
-                    <Trash2 size={18} className={isRecurringInstance ? 'text-gray-400' : 'text-red-600'} />
+                    <Trash2 size={18} className={isRecurringInstance ? 'text-gray-600' : 'text-red-600'} />
                   </button>
                 </>
               )}
@@ -314,7 +404,7 @@ export default function InvestmentDetailModal({
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm font-medium text-blue-900 mb-1">Recurring Transaction</p>
                 <p className="text-xs text-blue-700">
-                  This is a recurring transaction instance. Editing and deletion are not available for recurring transactions at this time.
+                  This is a recurring transaction instance. Click Edit or Delete to manage the recurring transaction with scope options (single occurrence, future occurrences, or entire series).
                 </p>
               </div>
             )}
@@ -400,6 +490,17 @@ export default function InvestmentDetailModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Recurring Transaction Modal */}
+      {showRecurringModal && recurringTransaction && recurringModalMode && (
+        <RecurringTransactionModal
+          isOpen={showRecurringModal}
+          onClose={handleRecurringModalClose}
+          recurringTransaction={recurringTransaction}
+          mode={recurringModalMode}
+          onSuccess={handleRecurringModalSuccess}
+        />
       )}
     </>
   )

@@ -308,12 +308,16 @@ export default function History() {
           transaction={selectedInvestment}
           onClose={() => setSelectedInvestment(null)}
           onUpdate={async (updatedTransactionData?: TransactionWithCategory) => {
-            // If updated transaction data is provided, use it directly
-            if (updatedTransactionData) {
-              setSelectedInvestment(updatedTransactionData)
-            }
             // Fetch fresh data to update the list
             await fetchData()
+            
+            // If updated transaction data is provided (for edits), update selected transaction
+            if (updatedTransactionData) {
+              setSelectedInvestment(updatedTransactionData)
+            } else {
+              // For deletes, close the modal by clearing selection
+              setSelectedInvestment(null)
+            }
           }}
         />
       )}

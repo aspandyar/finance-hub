@@ -89,8 +89,32 @@ export const apiRequest = async <T>(
       throw error;
     }
 
-    const responseData = await response.json();
-    return responseData as T;
+    // Handle empty responses (e.g., DELETE operations with 204 No Content)
+    const contentType = response.headers.get('content-type');
+    const contentLength = response.headers.get('content-length');
+    
+    // If content-length is 0 or response is 204 No Content, return empty result
+    if (response.status === 204 || contentLength === '0') {
+      return undefined as T;
+    }
+    
+    // Check if there's actually content to parse
+    const text = await response.text();
+    
+    // If response is empty, return undefined
+    if (!text || text.trim() === '') {
+      return undefined as T;
+    }
+    
+    // Try to parse as JSON
+    try {
+      const responseData = JSON.parse(text);
+      return responseData as T;
+    } catch (parseError) {
+      // If it's not valid JSON but we got here, it might be plain text
+      // Return the text as the result (for void types, this will be undefined)
+      return (text || undefined) as T;
+    }
   } catch (error: any) {
     // Re-throw with more context
     if (error instanceof Error) {

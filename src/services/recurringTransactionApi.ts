@@ -39,6 +39,28 @@ export interface UpdateRecurringTransactionInput {
   isActive?: boolean;
 }
 
+export type EditScope = 'single' | 'future' | 'all';
+export type DeleteScope = 'single' | 'future' | 'all';
+
+export interface UpdateRecurringTransactionWithScopeInput extends UpdateRecurringTransactionInput {
+  scope: EditScope;
+  effectiveDate: string; // YYYY-MM-DD format
+}
+
+export interface DeleteRecurringTransactionWithScopeInput {
+  scope: DeleteScope;
+  effectiveDate: string; // YYYY-MM-DD format
+}
+
+export interface UpdateRecurringTransactionResponse {
+  message: string;
+  recurringTransaction: RecurringTransaction;
+  newRecurringTransaction?: RecurringTransaction;
+  effectiveDate?: string;
+  original?: RecurringTransaction;
+  new?: RecurringTransaction;
+}
+
 export const recurringTransactionApi = {
   // Get all recurring transactions
   getAll: async (): Promise<RecurringTransaction[]> => {
@@ -66,7 +88,7 @@ export const recurringTransactionApi = {
     });
   },
 
-  // Update recurring transaction
+  // Update recurring transaction (legacy - without scope)
   update: async (
     id: string,
     data: UpdateRecurringTransactionInput
@@ -77,10 +99,32 @@ export const recurringTransactionApi = {
     });
   },
 
-  // Delete recurring transaction
+  // Update recurring transaction with scope
+  updateWithScope: async (
+    id: string,
+    data: UpdateRecurringTransactionWithScopeInput
+  ): Promise<UpdateRecurringTransactionResponse> => {
+    return apiRequest<UpdateRecurringTransactionResponse>(`/api/recurring-transactions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete recurring transaction (legacy - without scope)
   delete: async (id: string): Promise<void> => {
     return apiRequest<void>(`/api/recurring-transactions/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  // Delete recurring transaction with scope
+  deleteWithScope: async (
+    id: string,
+    data: DeleteRecurringTransactionWithScopeInput
+  ): Promise<void> => {
+    return apiRequest<void>(`/api/recurring-transactions/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify(data),
     });
   },
 };
