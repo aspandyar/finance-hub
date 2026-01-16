@@ -12,8 +12,10 @@ import { DateFilterProvider } from './contexts/DateFilterContext'
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
+  const basename = import.meta.env.PROD ? '/finance-hub-frontend' : ''
+
   return (
-    <Router>
+    <Router basename={basename}>
       <ProtectedRoute>
         <DateFilterProvider>
           <div className="min-h-screen bg-gray-50">
