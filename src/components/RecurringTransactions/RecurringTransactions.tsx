@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, RefreshCw, Calendar, DollarSign, Tag } from 'lucide-react';
+import { Plus, Edit, Trash2, RefreshCw, Calendar, DollarSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { recurringTransactionApi, type RecurringTransaction } from '../../services/recurringTransactionApi';
 import { categoryApi, type Category } from '../../services/categoryApi';

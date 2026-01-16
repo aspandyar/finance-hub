@@ -49,7 +49,6 @@ export const generateRecurringInstances = (
 
   // Generate instances based on frequency
   let currentDate = new Date(effectiveStart)
-  const amount = parseFloat(recurringTransaction.amount)
 
   while (currentDate <= effectiveEnd) {
     // Check if this date falls within the range
