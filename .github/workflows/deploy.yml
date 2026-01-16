@@ -36,6 +36,7 @@ jobs:
       - name: Build
         env:
           VITE_API_BASE_URL: https://financehub-e8151e66cb7f.herokuapp.com/api
+          GITHUB_PAGES: true
         run: npm run build
 
       - name: Setup Pages
