@@ -78,3 +78,32 @@ npm run preview
 ## Development
 
 The project uses TypeScript for type safety and Tailwind CSS for styling. All components are written with focus on reusability and code cleanliness.
+
+## Deployment to GitHub Pages
+
+The frontend is automatically deployed to GitHub Pages using GitHub Actions when you push to the `main` or `master` branch.
+
+### Setup
+
+1. **Enable GitHub Pages** in your repository settings:
+   - Go to Settings → Pages
+   - Source: Select "GitHub Actions"
+
+2. **Configure API Backend URL**:
+   - The workflow automatically sets `VITE_API_BASE_URL` to `https://financehub-e8151e66cb7f.herokuapp.com/api`
+   - This is configured in `.github/workflows/deploy.yml`
+
+3. **Base Path Configuration** (if needed):
+   - If your repository is a project page (not user/organization page), you may need to set a base path
+   - Update `vite.config.ts` to set `base: '/your-repo-name/'` or set `VITE_BASE_PATH` environment variable
+
+### Manual Deployment
+
+You can also trigger deployment manually:
+- Go to Actions tab → "Deploy to GitHub Pages" → Run workflow
+
+### Environment Variables
+
+For production builds, the following environment variables are used:
+- `VITE_API_BASE_URL`: Backend API URL (set automatically in GitHub Actions)
+- `VITE_BASE_PATH`: Base path for GitHub Pages (optional, defaults to `/`)
