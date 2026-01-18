@@ -12,7 +12,9 @@ import { DateFilterProvider } from './contexts/DateFilterContext'
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const basename = import.meta.env.PROD ? '/finance-hub-frontend' : ''
+  // Use Vite's BASE_URL which is automatically set from vite.config.ts base option
+  // Remove trailing slash for React Router basename (React Router handles it)
+  const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || ''
 
   return (
     <Router basename={basename}>
