@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { TrendingUp, TrendingDown, PiggyBank, BarChart3, Loader2, TrendingUp as PredictionIcon } from 'lucide-react'
+import { TrendingUp, TrendingDown, PiggyBank, BarChart3, Loader2, TrendingUp as PredictionIcon, LogIn } from 'lucide-react'
 import MetricCard from './MetricCard'
 import { useAuth } from '../../contexts/AuthContext'
+import { useAuthModal } from '../../contexts/AuthModalContext'
 import { useDashboardData } from '../../hooks/useDashboardData'
 import { usePrediction } from '../../hooks/usePrediction'
 import { formatCurrency } from '../../utils/formatters'
@@ -45,6 +46,7 @@ function Sparkline({ dataPoints }: { dataPoints: number[] }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { openAuthModal } = useAuthModal()
   const {
     balance,
     totalIncome,
@@ -78,6 +80,10 @@ export default function Dashboard() {
   })
 
   const handleOpenPredictionModal = () => {
+    if (!user) {
+      openAuthModal()
+      return
+    }
     setPredictionModal({ isOpen: true })
     clearError()
   }
@@ -151,6 +157,21 @@ export default function Dashboard() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Sign-in prompt when not authenticated */}
+      {!user && (
+        <div className="mb-6 p-4 bg-white rounded-card shadow-card border border-gray-200 flex items-center justify-between gap-4">
+          <p className="text-gray-600">
+            Sign in to track your finances, add transactions, and see your history.
+          </p>
+          <button
+            onClick={openAuthModal}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors shrink-0"
+          >
+            <LogIn size={18} />
+            Sign in
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-4 gap-6">
         {/* Balance - Wide card */}
         <MetricCard
